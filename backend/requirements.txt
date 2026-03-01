@@ -3,3 +3,7 @@ uvicorn[standard]
 yfinance
 pandas
 python-dateutil
+google-generativeai
+python-dotenv
+feedparser
+requests
