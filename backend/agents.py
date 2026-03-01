@@ -28,12 +28,35 @@ class StockDataFetcher:
         # Basit Hareketli Ortalamaları (SMA) hesapla
         df['SMA_20'] = df['Close'].rolling(window=20).mean()
         df['SMA_50'] = df['Close'].rolling(window=50).mean()
+        df['Volume_SMA_20'] = df['Volume'].rolling(window=20).mean()
+
+        # Bollinger Bantları
+        df['BB_STD'] = df['Close'].rolling(window=20).std()
+        df['BB_UP'] = df['SMA_20'] + (df['BB_STD'] * 2)
+        df['BB_LOW'] = df['SMA_20'] - (df['BB_STD'] * 2)
+
+        # RSI (14) Hesaplama
+        delta = df['Close'].diff()
+        up = delta.clip(lower=0)
+        down = -1 * delta.clip(upper=0)
+        ema_up = up.ewm(com=13, adjust=False).mean()
+        ema_down = down.ewm(com=13, adjust=False).mean()
+        rs = ema_up / ema_down
+        df['RSI_14'] = 100 - (100 / (1 + rs))
+
+        # MACD (12, 26, 9) Hesaplama
+        df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
+        df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
+        df['MACD_Line'] = df['EMA_12'] - df['EMA_26']
+        df['MACD_Signal'] = df['MACD_Line'].ewm(span=9, adjust=False).mean()
+        df['MACD_Hist'] = df['MACD_Line'] - df['MACD_Signal']
+
+        # Kullanıcının talebi üzerine NaN değerlerini doldur (bfill ile geçmişe dönük doldurma)
+        df.bfill(inplace=True)
+        df.fillna(50, inplace=True)
 
         raw_data = []
         for index, row in df.iterrows():
-            if math.isnan(row["Open"]) or math.isnan(row["Close"]) or math.isinf(row["Volume"]):
-                continue
-
             raw_data.append({
                 "date": index.strftime('%Y-%m-%d'),
                 "open": float(row["Open"]),
@@ -41,8 +64,15 @@ class StockDataFetcher:
                 "low": float(row["Low"]),
                 "close": float(row["Close"]),
                 "volume": float(row["Volume"]),
-                "sma20": float(row["SMA_20"]) if not math.isnan(row["SMA_20"]) else None,
-                "sma50": float(row["SMA_50"]) if not math.isnan(row["SMA_50"]) else None
+                "sma20": float(row["SMA_20"]),
+                "sma50": float(row["SMA_50"]),
+                "bb_up": float(row["BB_UP"]),
+                "bb_low": float(row["BB_LOW"]),
+                "rsi14": float(row["RSI_14"]),
+                "macd_line": float(row["MACD_Line"]) if "MACD_Line" in row else None,
+                "macd_signal": float(row["MACD_Signal"]) if "MACD_Signal" in row else None,
+                "macd_hist": float(row["MACD_Hist"]) if "MACD_Hist" in row else None,
+                "volume_sma_20": float(row["Volume_SMA_20"]) if "Volume_SMA_20" in row else None
             })
 
         return raw_data
@@ -56,6 +86,12 @@ class TradingViewFormatter:
         histogram_series = []
         sma20_series = []
         sma50_series = []
+        bb_up_series = []
+        bb_low_series = []
+        rsi14_series = []
+        macd_line_series = []
+        macd_signal_series = []
+        macd_hist_series = []
 
         for item in raw_data:
             candlestick_series.append({
@@ -74,22 +110,45 @@ class TradingViewFormatter:
             })
 
             if item.get("sma20") is not None:
-                sma20_series.append({
-                    "time": item["date"],
-                    "value": item["sma20"]
-                })
+                sma20_series.append({"time": item["date"], "value": item["sma20"]})
             
             if item.get("sma50") is not None:
-                sma50_series.append({
-                    "time": item["date"],
-                    "value": item["sma50"]
+                sma50_series.append({"time": item["date"], "value": item["sma50"]})
+
+            if item.get("bb_up") is not None:
+                bb_up_series.append({"time": item["date"], "value": item["bb_up"]})
+
+            if item.get("bb_low") is not None:
+                bb_low_series.append({"time": item["date"], "value": item["bb_low"]})
+
+            if item.get("rsi14") is not None:
+                rsi14_series.append({"time": item["date"], "value": item["rsi14"]})
+
+            if item.get("macd_line") is not None and not math.isnan(item["macd_line"]):
+                macd_line_series.append({"time": item["date"], "value": item["macd_line"]})
+
+            if item.get("macd_signal") is not None and not math.isnan(item["macd_signal"]):
+                macd_signal_series.append({"time": item["date"], "value": item["macd_signal"]})
+
+            if item.get("macd_hist") is not None and not math.isnan(item["macd_hist"]):
+                is_hist_green = item["macd_hist"] >= 0
+                macd_hist_series.append({
+                    "time": item["date"], 
+                    "value": item["macd_hist"],
+                    "color": 'rgba(38, 166, 154, 0.5)' if is_hist_green else 'rgba(239, 83, 80, 0.5)'
                 })
 
         return {
             "candlestickSeries": candlestick_series,
             "histogramSeries": histogram_series,
             "sma20Series": sma20_series,
-            "sma50Series": sma50_series
+            "sma50Series": sma50_series,
+            "bbUpperSeries": bb_up_series,
+            "bbLowerSeries": bb_low_series,
+            "rsi14Series": rsi14_series,
+            "macdLineSeries": macd_line_series,
+            "macdSignalSeries": macd_signal_series,
+            "macdHistSeries": macd_hist_series
         }
 
 
@@ -137,16 +196,59 @@ class AIAgent:
     def __init__(self, ticker: str):
         self.ticker = ticker
 
-    def generate_summary(self, news_text: str):
+    def generate_summary(self, news_text: str, technical_data=None):
         if not news_text or news_text == "Haber bulunamadı":
-            return "Bu hisse senedi için güncel bir haber bulunamadı."
+            news_section = "Bu hisse senedi için güncel bir haber bulunamadı."
+        else:
+            news_section = f"Haberler: {news_text}"
 
         prompt = (
-            f"Sen kıdemli bir Borsa İstanbul analistisin. Aşağıda {self.ticker} hissesi ile ilgili son dakika haber başlıkları verilmiştir. "
-            f"Sadece bu haberlere dayanarak, hissenin piyasa yönü (olumlu/olumsuz) hakkında yatırımcılara yönelik 3 cümlelik, "
-            f"profesyonel bir özet analiz yaz.\n\n"
-            f"Haberler: {news_text}"
+            f"Sen kıdemli bir borsa analistisin. Sana verilen {self.ticker} hissesine ait teknik (RSI, SMA, Fiyat vb.) ve temel (Haberler, Rasyolar) verileri kullanarak KESİNLİKLE aşağıdaki Markdown formatına uyarak bir analiz yaz. Uzun paragraflardan kaçın, her şeyi kısa, net ve maddeler halinde yaz:\n\n"
+            f"### 🎯 Genel Özet\n"
+            f"[Buraya 1-2 cümlelik durum özeti yaz]\n\n"
+            f"### 📊 Teknik Görünüm\n"
+            f"* **Fiyat ve Ortalama:** [Fiyatın SMA ile ilişkisini yorumla]\n"
+            f"* **Momentum (RSI):** [RSI değerini yorumla]\n"
+            f"* **Bantlar:** [Bollinger durumunu yorumla]\n\n"
         )
+        
+        if technical_data:
+            rsi = technical_data.get('rsi14', 50)
+            sma50 = technical_data.get('sma50', 1)
+            close = technical_data.get('close', 1)
+            bb_up = technical_data.get('bb_up', 1)
+            bb_low = technical_data.get('bb_low', 1)
+            
+            # Yeni eklenen veriler
+            macd_line = technical_data.get('macd_line', 0.0)
+            macd_signal = technical_data.get('macd_signal', 0.0)
+            macd_hist = technical_data.get('macd_hist', 0.0)
+            volume_current = technical_data.get('volume', 0.0)
+            volume_avg_20 = technical_data.get('volume_sma_20', 0.0)
+            
+            sma_status = "altında" if close < sma50 else "üstünde"
+            bb_dist = round(((bb_up - close) / close) * 100, 2) if bb_up and close else 0
+
+            prompt += (
+                f"### 🌪️ Momentum ve Hacim (MACD & Volatilite)\n"
+                f"* **Hacim Onayı:** [Bugünkü hacmi ({volume_current}), 20 günlük ortalama hacimle ({volume_avg_20}) kıyasla. Eğer fiyat artıyorsa ve hacim de ortalamanın üzerindeyse 'Yükseliş hacimle destekleniyor' de. Hacim düşükse 'Harekete katılım zayıf' şeklinde yorumla.]\n"
+                f"* **MACD Sinyali:** [MACD çizgisinin ({macd_line:.2f}), Sinyal çizgisini ({macd_signal:.2f}) yukarı mı (Al Sinyali) yoksa aşağı mı (Sat Sinyali) kestiğini ve histogramın ({macd_hist:.2f}) yönünü (momentum artıyor/azalıyor) yorumla.]\n\n"
+                f"### 📰 Temel Beklentiler\n"
+                f"* [Haberlerden veya rasyolardan çıkarılan en önemli 1. madde]\n"
+                f"* [Haberlerden çıkarılan 2. madde]\n\n"
+                f"### 💡 Strateji ve Sonuç\n"
+                f"[Kısa, net yatırımcı tavsiyesi ve dikkat edilmesi gereken destek/direnç seviyeleri]\n\n"
+            )
+
+            prompt += (
+                f"--- TEKNİK DURUM ---\n"
+                f"- RSI (14 Günlük): {rsi:.2f}\n"
+                f"- Fiyat ({close:.2f}), SMA 50'nin ({sma50:.2f}) {sma_status}.\n"
+                f"- Bollinger Üst Bandına (Direnç) uzaklık: %{bb_dist}\n"
+                f"- Bollinger Alt Bandı (Destek): {bb_low:.2f}\n\n"
+            )
+
+        prompt += f"--- HABERLER ---\n{news_section}"
 
         try:
             api_key = os.getenv("GEMINI_API_KEY")

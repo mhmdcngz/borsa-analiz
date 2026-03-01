@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface NewsAnalysisProps {
     ticker: string;
@@ -32,6 +33,11 @@ export default function NewsAnalysis({ ticker }: NewsAnalysisProps) {
         fetchAnalysis();
     }, [ticker]);
 
+    const formattedText = (summary || "")
+        .replace(/###/g, '\n\n###')
+        .replace(/\* \*\*/g, '\n* **')
+        .replace(/ \*(?=\s)/g, '\n\n*');
+
     return (
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-xl relative overflow-hidden group hover:border-teal-500/50 transition-colors duration-500">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-indigo-500 to-purple-600 opacity-70 group-hover:opacity-100 transition-opacity"></div>
@@ -58,9 +64,15 @@ export default function NewsAnalysis({ ticker }: NewsAnalysisProps) {
                         {error}
                     </div>
                 ) : (
-                    <p className="border-l-2 border-indigo-500 pl-4 py-1 italic">
-                        "{summary}"
-                    </p>
+                    <div className="block w-full text-slate-300 leading-relaxed space-y-2
+                        [&>h3]:text-teal-400 [&>h3]:font-bold [&>h3]:text-lg [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:block
+                        [&>ul]:block [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:my-4 [&>ul>li]:pl-1 [&>ul>li]:mb-2 
+                        [&>p]:block [&>p]:mb-3
+                        [&>strong]:text-teal-300">
+                        <ReactMarkdown>
+                            {formattedText}
+                        </ReactMarkdown>
+                    </div>
                 )}
             </div>
         </div>

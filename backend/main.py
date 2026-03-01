@@ -26,11 +26,19 @@ def get_stock_data(ticker: str):
 @app.get("/api/analysis/{ticker}")
 def get_stock_analysis(ticker: str):
     try:
+        # Teknik verileri al
+        from agents import StockDataFetcher
+        fetcher = StockDataFetcher(ticker)
+        raw_data = fetcher.fetch_data()
+        tech_data = raw_data[-1] if raw_data else None
+
+        # Haberleri al
         news_agent = NewsAgent(ticker)
         news_items = news_agent.fetch_news()
         
+        # AI Analizi (Haberler + Teknik)
         ai_agent = AIAgent(ticker)
-        summary = ai_agent.generate_summary(news_items)
+        summary = ai_agent.generate_summary(news_items, tech_data)
         
         return {"summary": summary}
     except Exception as e:

@@ -80,23 +80,39 @@ export default function Fundamentals({ ticker }: FundamentalsProps) {
     }
 
     const items = [
-        { label: "F/K Oranı", value: formatNumber(data?.trailingPE) },
-        { label: "PD/DD", value: formatNumber(data?.priceToBook) },
-        { label: "Piyasa Değeri", value: formatNumber(data?.marketCap) },
-        { label: "Temettü Verimi", value: formatPercent(data?.dividendYield) },
-        { label: "52H Zirve", value: formatNumber(data?.fiftyTwoWeekHigh) },
-        { label: "52H Dip", value: formatNumber(data?.fiftyTwoWeekLow) },
+        { label: "F/K Oranı", value: formatNumber(data?.trailingPE), numValue: data?.trailingPE },
+        { label: "PD/DD", value: formatNumber(data?.priceToBook), numValue: data?.priceToBook },
+        { label: "Piyasa Değeri", value: formatNumber(data?.marketCap), numValue: data?.marketCap },
+        { label: "Temettü Verimi", value: formatPercent(data?.dividendYield), numValue: data?.dividendYield },
+        { label: "52H Zirve", value: formatNumber(data?.fiftyTwoWeekHigh), numValue: data?.fiftyTwoWeekHigh },
+        { label: "52H Dip", value: formatNumber(data?.fiftyTwoWeekLow), numValue: data?.fiftyTwoWeekLow },
     ];
+
+    const getValueColor = (val: any) => {
+        if (typeof val === 'number') {
+            if (val > 0) return 'text-emerald-400';
+            if (val < 0) return 'text-red-400';
+        }
+        return 'text-neutral-100';
+    };
 
     return (
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden relative">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-500 opacity-70"></div>
 
-            <div className="p-4 md:p-6 text-white grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* 3x2 veya 2x3 Grid yapısı, içeriden border-slate-800 ile ayrılmış */}
+            <div className="text-white grid grid-cols-2 md:grid-cols-3 divide-y divide-x divide-slate-800 border-t border-slate-800 mt-4 md:mt-6">
                 {items.map((item, index) => (
-                    <div key={index} className="flex flex-col bg-neutral-950 p-4 rounded-xl border border-neutral-800/50 hover:border-teal-500/30 transition-colors">
-                        <span className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-1">{item.label}</span>
-                        <span className="text-lg md:text-xl font-bold text-neutral-100">{item.value}</span>
+                    <div
+                        key={index}
+                        className="flex flex-col p-4 md:p-6 bg-neutral-950/50 hover:bg-neutral-800/50 transition-colors group cursor-default"
+                    >
+                        <span className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-2 group-hover:text-teal-400/80 transition-colors">
+                            {item.label}
+                        </span>
+                        <span className={`text-xl md:text-2xl font-black ${getValueColor(item.numValue)}`}>
+                            {item.value}
+                        </span>
                     </div>
                 ))}
             </div>
