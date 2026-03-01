@@ -21,11 +21,12 @@ export default function Simulation({ ticker }: SimulationProps) {
     const [amount, setAmount] = useState<number>(1000);
     const [months, setMonths] = useState<number>(6);
 
-    const fetchSimulation = async (fetchAmount: number, fetchMonths: number) => {
+    const fetchSimulation = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:8000/api/simulation/${ticker}?amount=${fetchAmount}&months=${fetchMonths}`);
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://algobist.onrender.com";
+            const response = await fetch(`${apiUrl}/api/simulation/${ticker}?amount=${amount}&months=${months}`);
             if (!response.ok) {
                 throw new Error("Simülasyon verisi alınamadı.");
             }
@@ -44,12 +45,14 @@ export default function Simulation({ ticker }: SimulationProps) {
     };
 
     useEffect(() => {
-        fetchSimulation(amount, months);
+        if (ticker) {
+            fetchSimulation();
+        }
     }, [ticker]);
 
     const handleCalculate = (e: React.FormEvent) => {
         e.preventDefault();
-        fetchSimulation(amount, months);
+        fetchSimulation();
     };
 
     if (loading && !data) {

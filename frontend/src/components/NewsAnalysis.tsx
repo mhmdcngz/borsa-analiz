@@ -17,7 +17,8 @@ export default function NewsAnalysis({ ticker }: NewsAnalysisProps) {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch(`http://localhost:8000/api/analysis/${ticker}`);
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://algobist.onrender.com";
+                const response = await fetch(`${apiUrl}/api/analysis/${ticker}`);
                 if (!response.ok) {
                     throw new Error("Özet alınamadı.");
                 }

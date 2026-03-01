@@ -65,7 +65,8 @@ export default function Chart({ ticker }: { ticker: string }) {
             setError(null);
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/api/stock/${ticker}`);
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://algobist.onrender.com";
+                const res = await fetch(`${apiUrl}/api/stock/${ticker}`);
                 if (!res.ok) throw new Error('Veri çekilemedi. Lütfen hisse kodunu kontrol edin.');
 
                 const data = await res.json();

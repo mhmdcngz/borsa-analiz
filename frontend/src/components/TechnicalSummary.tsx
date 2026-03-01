@@ -31,8 +31,9 @@ export default function TechnicalSummary({ ticker }: TechnicalSummaryProps) {
             setLoading(true);
             setError(null);
             try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://algobist.onrender.com";
                 // Verileri aynı hisse grafiği için aldığımız servisten çekiyoruz (agents.py içindeki StockDataFetcher)
-                const res = await fetch(`http://127.0.0.1:8000/api/stock/${ticker}`);
+                const res = await fetch(`${apiUrl}/api/stock/${ticker}`);
                 if (!res.ok) throw new Error("Teknik veriler alınamadı.");
 
                 const result = await res.json();

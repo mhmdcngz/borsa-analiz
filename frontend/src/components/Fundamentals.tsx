@@ -25,7 +25,8 @@ export default function Fundamentals({ ticker }: FundamentalsProps) {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch(`http://localhost:8000/api/fundamentals/${ticker}`);
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://algobist.onrender.com";
+                const response = await fetch(`${apiUrl}/api/fundamentals/${ticker}`);
                 if (!response.ok) {
                     throw new Error("Temel veriler alınamadı.");
                 }
