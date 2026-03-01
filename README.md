@@ -5,7 +5,6 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
 
-![AlgoBIST Ekran Görüntüsü](ekran-goruntusu-linki-buraya)
 
 ## Harika Bir Finansal Deneyim: AlgoBIST Hakkında
 
@@ -78,4 +77,3 @@ npm run dev
 
 **Geliştirici:** Muhammed Cengiz  
 **Portfolyo Web Sitesi:** [muhammedcengiz.com](https://muhammedcengiz.com)  
-**Lisans:** MIT
