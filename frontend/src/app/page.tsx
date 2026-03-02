@@ -152,42 +152,31 @@ export default function Home() {
       {/* Grid İçerik Alanı */}
       <div className="max-w-[1600px] mx-auto p-4 md:p-6 mt-2 grid grid-cols-1 md:grid-cols-12 gap-6">
 
-        {/* SOL KOLON: Grafik (8 Kolon) */}
-        <section className="col-span-1 md:col-span-8 flex flex-col h-full min-h-[500px] md:min-h-[70vh]">
+        {/* 1. BÖLÜM: Grafik (12 Kolon - Tam Genişlik) */}
+        <section className="col-span-1 md:col-span-12 flex flex-col h-full min-h-[500px] md:min-h-[70vh]">
           <div className="bg-slate-900/40 backdrop-blur-lg border border-slate-700/50 rounded-xl p-4 shadow-2xl relative flex flex-col flex-1 overflow-hidden h-full">
             <div className="text-xs text-[#26a69a] font-bold uppercase tracking-widest mb-3 flex items-center">
               <span className="mr-2 inline-block w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
               Fiyat & Teknik Grafiği
             </div>
-            {/* Chart componenti full height cover etsin */}
             <div className="flex-1 w-full relative">
               <Chart ticker={ticker} />
             </div>
           </div>
         </section>
 
-        {/* SAĞ KOLON: Rasyolar ve Simülasyon (4 Kolon) */}
-        <section className="col-span-1 md:col-span-4 flex flex-col gap-6">
-          {/* Rasyo Kartı */}
+        {/* 2. BÖLÜM: Temel Analiz (Grafiğin altında 12 Kolon) */}
+        <section className="col-span-1 md:col-span-12 flex flex-col">
           <div className="bg-slate-900/40 backdrop-blur-lg border border-slate-700/50 rounded-xl p-4 shadow-2xl relative overflow-hidden">
             <div className="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-4">
               Temel Analiz
             </div>
             <Fundamentals ticker={ticker} />
           </div>
-
-          {/* Simülasyon Kartı (Tırmanarak Büyüsün) */}
-          <div className="bg-slate-900/40 backdrop-blur-lg border border-slate-700/50 rounded-xl p-4 shadow-2xl relative overflow-hidden flex-1">
-            <div className="text-xs text-purple-400 font-bold uppercase tracking-widest mb-4">
-              DCA Backtest
-            </div>
-            <Simulation ticker={ticker} />
-          </div>
         </section>
 
-        {/* ALT BÖLÜM: Tam Genişlik AI / Haber / Teknik Analiz Özeti (12 Kolon) */}
+        {/* 3. BÖLÜM: Teknik Özet ve AI Analizi (12 Kolon) */}
         <section className="col-span-1 md:col-span-12 flex flex-col gap-6">
-          {/* Teknik Görünüm Özeti */}
           <div className="bg-slate-900/40 backdrop-blur-lg border border-slate-700/50 rounded-xl p-4 shadow-2xl relative overflow-hidden">
             <div className="text-xs text-[#26a69a] font-bold uppercase tracking-widest mb-4">
               Teknik Görünüm Özeti
@@ -200,6 +189,16 @@ export default function Home() {
               AI Analist Paneli
             </div>
             <NewsAnalysis ticker={ticker} />
+          </div>
+        </section>
+
+        {/* 4. BÖLÜM: DCA Backtest (En Altta 12 Kolon) */}
+        <section className="col-span-1 md:col-span-12 flex flex-col">
+          <div className="bg-slate-900/40 backdrop-blur-lg border border-slate-700/50 rounded-xl p-4 shadow-2xl relative overflow-hidden">
+            <div className="text-xs text-purple-400 font-bold uppercase tracking-widest mb-4">
+              DCA Backtest
+            </div>
+            <Simulation ticker={ticker} />
           </div>
         </section>
 

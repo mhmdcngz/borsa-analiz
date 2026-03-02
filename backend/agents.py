@@ -13,7 +13,10 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 class StockDataFetcher:
     """Ajan 1: Veri Mühendisi"""
     def __init__(self, ticker: str):
-        self.ticker = ticker
+        if ticker.endswith(".IS") or ticker.endswith("=X"):
+            self.ticker = ticker
+        else:
+            self.ticker = f"{ticker}.IS"
 
     def fetch_data(self):
         stock = yf.Ticker(self.ticker)
@@ -203,9 +206,12 @@ class AIAgent:
             news_section = f"Haberler: {news_text}"
 
         prompt = (
-            f"Sen kıdemli bir borsa analistisin. Sana verilen {self.ticker} hissesine ait teknik (RSI, SMA, Fiyat vb.) ve temel (Haberler, Rasyolar) verileri kullanarak KESİNLİKLE aşağıdaki Markdown formatına uyarak bir analiz yaz. Uzun paragraflardan kaçın, her şeyi kısa, net ve maddeler halinde yaz:\n\n"
+            f"Sen kıdemli bir borsa analisti ve aynı zamanda usta bir jeopolitik/makroekonomi uzmanısın. Haberlerde savaş, siyasi kriz veya faiz kararı varsa bunların sektörel etkilerini mutlaka analiz et. Sana verilen {self.ticker} hissesine ait teknik (RSI, SMA, Fiyat vb.) ve temel (Haberler, Rasyolar) verileri kullanarak KESİNLİKLE aşağıdaki Markdown formatına uyarak bir analiz yaz. Uzun paragraflardan kaçın, her şeyi kısa, net ve maddeler halinde yaz:\n\n"
             f"### 🎯 Genel Özet\n"
             f"[Buraya 1-2 cümlelik durum özeti yaz]\n\n"
+            f"### 🌍 Makroekonomik ve Jeopolitik Etki\n"
+            f"* **Ortadoğu ve Küresel Riskler:** [Özellikle İsrail-İran eksenindeki sıcak çatışma risklerinin, Ortadoğu'daki savaş geriliminin ve küresel makroekonomik durumun (faiz, enerji fiyatları) bu hisseye ve sektöre doğrudan veya dolaylı etkilerini KESİNLİKLE spesifik olarak yorumla.]\n"
+            f"* **Sektörel Duyarlılık:** [Hissenin bulunduğu sektörün olası bir bölgesel savaşa, tedarik zinciri krizine veya petrol fiyatlarındaki dalgalanmaya karşı ne kadar kırılgan veya dirençli olduğunu analiz et.]\n\n"
             f"### 📊 Teknik Görünüm\n"
             f"* **Fiyat ve Ortalama:** [Fiyatın SMA ile ilişkisini yorumla]\n"
             f"* **Momentum (RSI):** [RSI değerini yorumla]\n"
@@ -264,30 +270,40 @@ class AIAgent:
 
 
 class FundamentalAgent:
-    """Ajan 5: Temel Analiz Uzmanı"""
     def __init__(self, ticker: str):
-        self.ticker = ticker
+        if ticker.endswith(".IS") or ticker.endswith("=X"):
+            self.ticker = ticker
+        else:
+            self.ticker = f"{ticker}.IS"
 
     def fetch_fundamentals(self):
         try:
             stock = yf.Ticker(self.ticker)
             info = stock.info
+            fast = stock.fast_info
+            
+            def get_val(key, fast_key=None):
+                val = info.get(key)
+                if (val is None or val == "N/A") and fast_key:
+                    val = fast.get(fast_key)
+                return round(val, 2) if isinstance(val, (int, float)) else "N/A"
 
             return {
-                "trailingPE": info.get("trailingPE", "N/A"),
+                "trailingPE": info.get("trailingPE", info.get("forwardPE", "N/A")),
+                "forwardPE": info.get("forwardPE", "N/A"),
                 "priceToBook": info.get("priceToBook", "N/A"),
-                "marketCap": info.get("marketCap", "N/A"),
+                "marketCap": get_val("marketCap", "market_cap"),
                 "dividendYield": info.get("dividendYield", "N/A"),
-                "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh", "N/A"),
-                "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow", "N/A")
+                "fiftyTwoWeekHigh": get_val("fiftyTwoWeekHigh", "year_high"),
+                "fiftyTwoWeekLow": get_val("fiftyTwoWeekLow", "year_low"),
+                "beta": info.get("beta", "N/A"),
+                "profitMargins": info.get("profitMargins", "N/A"),
+                "returnOnEquity": info.get("returnOnEquity", "N/A"),
+                "revenueGrowth": info.get("revenueGrowth", "N/A"),
+                "debtToEquity": info.get("debtToEquity", "N/A")
             }
         except Exception as e:
-            print(f"Temel verileri çekme hatası: {e}")
-            return {
-                "trailingPE": "N/A", "priceToBook": "N/A", "marketCap": "N/A",
-                "dividendYield": "N/A", "fiftyTwoWeekHigh": "N/A", "fiftyTwoWeekLow": "N/A"
-            }
-
+            return {"trailingPE": "N/A", "priceToBook": "N/A", "marketCap": "N/A", "dividendYield": "N/A", "fiftyTwoWeekHigh": "N/A", "fiftyTwoWeekLow": "N/A"}
 
 class SimulationAgent:
     """Ajan 6: Portföy Simülasyon Uzmanı"""

@@ -10,6 +10,31 @@
 
 **AlgoBIST**, Borsa İstanbul (BİST) hisseleri için canlı veri, gelişmiş teknik indikatörler ve Google Gemini Yapay Zeka modeli ile anlık yorum üreten modern bir finansal karar destek sistemidir. Geleneksel karmaşık borsa terminallerine kıyasla, AlgoBIST hem yeni başlayanların hem de profesyonellerin kolayca okuyup analiz edebileceği sade, şık ve neon-koyu temalı bir arayüz (UI) sunar. 
 
+---
+
+## 🚀 Canlı Önizleme
+
+Projemiz şu anda **[algobist.vercel.app](https://algobist.vercel.app/)** adresinde canlı olarak yayınlanmaktadır!
+
+## 🌟 Faz 5 Güncellemesi Neler Getirdi?
+
+### 1. Ana Endeksler, Döviz ve Değerli Madenler Eklendi (Frontend)
+Kullanıcıların piyasanın genel yönünü analiz edebilmesi için en çok takip edilen makro enstrümanlar arama çubuğunda ilk sıralara (varsayılan listeye) yerleştirildi:
+- **BIST 100 Endeksi** (`XU100` / `XU100.IS`)
+- **BIST 30 Endeksi** (`XU030` / `XU030.IS`)
+- **BIST Tüm Endeksi** (`XTUMY` / `XTUMY.IS`)
+- **Gram Altın (TL)** (`GRAMALTIN` / `XAUTRY=X`)
+- **Gram Gümüş (TL)** (`GRAMGUMUS` / `XAGTRY=X`)
+- **Dolar/TL Kuru** (`USDTRY` / `TRY=X`)
+
+### 2. Akıllı Sembol Yönetimi (Backend / AI Ajanları)
+Öncesinde yalnızca Borsa İstanbul hisselerini baz alan ve varsayılan olarak her sorgunun sonuna `.IS` ekleyen altyapı, döviz kurları ve değerli madenleri destekleyecek şekilde güncellendi:
+- `StockDataFetcher` ve `FundamentalAgent` içerisindeki veri çekme algoritmaları akıllandırıldı.
+- Sistem artık `.IS` (BIST araçları) veya `=X` (Yahoo Finance döviz/emtia çiftleri) uzantılarını otomatik tanıyor. Eğer sembol zaten uygun uzantıya sahipse, ekstra uzantı eklemeden doğrudan veriyi çekiyor.
+- Bu sayede yapay zeka analiz ajanımız (AIAgent) artık kurların ve altının da teknik analizlerini, hareketli ortalamalarını ve makro-jeopolitik etkilerini başarıyla yorumlayabiliyor.
+
+---
+
 ## 🚀 Temel Özellikler
 
 *   🧠 **Yapay Zeka Analizi:** Gemini AI ile anlık temel ve teknik hisse yorumlaması. Verilerin analize dökülmüş, okunabilir Markdown hali.
@@ -77,3 +102,4 @@ npm run dev
 
 **Geliştirici:** Muhammed Cengiz  
 **Portfolyo Web Sitesi:** [muhammedcengiz.com](https://muhammedcengiz.com)  
+ 

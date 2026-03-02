@@ -1,5 +1,35 @@
 export const STOCK_LIST = [
     {
+        "symbol": "XU100.IS",
+        "code": "XU100",
+        "name": "BIST 100 Endeksi"
+    },
+    {
+        "symbol": "XU030.IS",
+        "code": "XU030",
+        "name": "BIST 30 Endeksi"
+    },
+    {
+        "symbol": "XTUMY.IS",
+        "code": "XTUMY",
+        "name": "BIST Tüm Endeksi"
+    },
+    {
+        "symbol": "XAUTRY=X",
+        "code": "GRAMALTIN",
+        "name": "Gram Altın (TL)"
+    },
+    {
+        "symbol": "XAGTRY=X",
+        "code": "GRAMGUMUS",
+        "name": "Gram Gümüş (TL)"
+    },
+    {
+        "symbol": "TRY=X",
+        "code": "USDTRY",
+        "name": "Dolar / TL"
+    },
+    {
         "symbol": "A.IS",
         "code": "A",
         "name": "A"

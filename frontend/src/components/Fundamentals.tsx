@@ -13,6 +13,12 @@ interface FundamentalData {
     dividendYield: number | string;
     fiftyTwoWeekHigh: number | string;
     fiftyTwoWeekLow: number | string;
+    forwardPE: number | string;
+    beta: number | string;
+    profitMargins: number | string;
+    returnOnEquity: number | string;
+    revenueGrowth: number | string;
+    debtToEquity: number | string;
 }
 
 export default function Fundamentals({ ticker }: FundamentalsProps) {
@@ -82,9 +88,15 @@ export default function Fundamentals({ ticker }: FundamentalsProps) {
 
     const items = [
         { label: "F/K Oranı", value: formatNumber(data?.trailingPE), numValue: data?.trailingPE },
+        { label: "İleri F/K", value: formatNumber(data?.forwardPE), numValue: data?.forwardPE },
         { label: "PD/DD", value: formatNumber(data?.priceToBook), numValue: data?.priceToBook },
         { label: "Piyasa Değeri", value: formatNumber(data?.marketCap), numValue: data?.marketCap },
         { label: "Temettü Verimi", value: formatPercent(data?.dividendYield), numValue: data?.dividendYield },
+        { label: "Beta (Risk)", value: formatNumber(data?.beta), numValue: data?.beta },
+        { label: "Kar Marjı", value: formatPercent(data?.profitMargins), numValue: data?.profitMargins },
+        { label: "ROE (Özsermaye Kar.)", value: formatPercent(data?.returnOnEquity), numValue: data?.returnOnEquity },
+        { label: "Gelir Büyümesi", value: formatPercent(data?.revenueGrowth), numValue: data?.revenueGrowth },
+        { label: "Borç / Özsermaye", value: formatNumber(data?.debtToEquity), numValue: data?.debtToEquity },
         { label: "52H Zirve", value: formatNumber(data?.fiftyTwoWeekHigh), numValue: data?.fiftyTwoWeekHigh },
         { label: "52H Dip", value: formatNumber(data?.fiftyTwoWeekLow), numValue: data?.fiftyTwoWeekLow },
     ];
@@ -102,7 +114,7 @@ export default function Fundamentals({ ticker }: FundamentalsProps) {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-500 opacity-70"></div>
 
             {/* 3x2 veya 2x3 Grid yapısı, içeriden border-slate-800 ile ayrılmış */}
-            <div className="text-white grid grid-cols-2 md:grid-cols-3 divide-y divide-x divide-slate-800 border-t border-slate-800 mt-4 md:mt-6">
+            <div className="text-white grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 divide-y divide-x divide-slate-800 border-t border-slate-800 mt-4 md:mt-6">
                 {items.map((item, index) => (
                     <div
                         key={index}
