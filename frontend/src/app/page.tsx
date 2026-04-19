@@ -13,6 +13,7 @@ export default function Home() {
   const [searchInput, setSearchInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [persona, setPersona] = useState<string>("short_term");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,6 +147,22 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {/* Sağ Kısım: Analiz Modu Seçici */}
+          <div className="flex items-center gap-2 shrink-0">
+            <label className="text-xs text-slate-500 uppercase tracking-wider font-bold whitespace-nowrap hidden md:block">
+              Analiz Modu:
+            </label>
+            <select
+              value={persona}
+              onChange={(e) => setPersona(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+            >
+              <option value="short_term">Kısa Vadeli Trader</option>
+              <option value="long_term">Uzun Vadeli Değer Yatırımcısı</option>
+              <option value="aggressive">Yüksek Riskli Agresif</option>
+            </select>
+          </div>
         </div>
       </header>
 
@@ -188,7 +205,7 @@ export default function Home() {
             <div className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-4">
               AI Analist Paneli
             </div>
-            <NewsAnalysis ticker={ticker} />
+            <NewsAnalysis ticker={ticker} persona={persona} />
           </div>
         </section>
 

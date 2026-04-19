@@ -3,6 +3,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import math
 import os
+import json
 import google.generativeai as genai
 from dotenv import load_dotenv
 import feedparser
@@ -10,6 +11,14 @@ import requests
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+PERSONA_PROMPTS = {
+    "short_term": "Sen agresif bir kısa vadeli trader olarak analiz yapıyorsun. Momentum sinyalleri, destek/direnç seviyeleri ve kısa vadeli fiyat katalistlerine odaklan. Analizi hızlı alım/satım kararlarına yönelik tut. Net al/sat/bekle önerisi yap.",
+    "long_term": "Sen sabırlı bir değer yatırımcısı olarak analiz yapıyorsun. Şirketin temel değeri, büyüme potansiyeli, kar marjları ve uzun vadeli rekabet avantajlarına odaklan. Kısa vadeli volatiliteyi ikinci plana at, şirketin 3-5 yıllık potansiyeline bak.",
+    "aggressive": "Sen yüksek risk toleranslı agresif bir yatırımcı olarak analiz yapıyorsun. Maksimum getiri potansiyelini, volatilite fırsatlarını ve yüksek riskli/yüksek ödüllü senaryoları ön plana çıkar. Kaldıraç veya yoğun pozisyon senaryo olasılıklarını değerlendir.",
+}
+
+
 class StockDataFetcher:
     """Ajan 1: Veri Mühendisi"""
     def __init__(self, ticker: str):
@@ -25,20 +34,16 @@ class StockDataFetcher:
         if df.empty:
             return None
 
-        # Eksik veya hatalı verileri temizle
         df.dropna(subset=['Open', 'High', 'Low', 'Close', 'Volume'], inplace=True)
 
-        # Basit Hareketli Ortalamaları (SMA) hesapla
         df['SMA_20'] = df['Close'].rolling(window=20).mean()
         df['SMA_50'] = df['Close'].rolling(window=50).mean()
         df['Volume_SMA_20'] = df['Volume'].rolling(window=20).mean()
 
-        # Bollinger Bantları
         df['BB_STD'] = df['Close'].rolling(window=20).std()
         df['BB_UP'] = df['SMA_20'] + (df['BB_STD'] * 2)
         df['BB_LOW'] = df['SMA_20'] - (df['BB_STD'] * 2)
 
-        # RSI (14) Hesaplama
         delta = df['Close'].diff()
         up = delta.clip(lower=0)
         down = -1 * delta.clip(upper=0)
@@ -47,14 +52,12 @@ class StockDataFetcher:
         rs = ema_up / ema_down
         df['RSI_14'] = 100 - (100 / (1 + rs))
 
-        # MACD (12, 26, 9) Hesaplama
         df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
         df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
         df['MACD_Line'] = df['EMA_12'] - df['EMA_26']
         df['MACD_Signal'] = df['MACD_Line'].ewm(span=9, adjust=False).mean()
         df['MACD_Hist'] = df['MACD_Line'] - df['MACD_Signal']
 
-        # Kullanıcının talebi üzerine NaN değerlerini doldur (bfill ile geçmişe dönük doldurma)
         df.bfill(inplace=True)
         df.fillna(50, inplace=True)
 
@@ -114,7 +117,7 @@ class TradingViewFormatter:
 
             if item.get("sma20") is not None:
                 sma20_series.append({"time": item["date"], "value": item["sma20"]})
-            
+
             if item.get("sma50") is not None:
                 sma50_series.append({"time": item["date"], "value": item["sma50"]})
 
@@ -136,7 +139,7 @@ class TradingViewFormatter:
             if item.get("macd_hist") is not None and not math.isnan(item["macd_hist"]):
                 is_hist_green = item["macd_hist"] >= 0
                 macd_hist_series.append({
-                    "time": item["date"], 
+                    "time": item["date"],
                     "value": item["macd_hist"],
                     "color": 'rgba(38, 166, 154, 0.5)' if is_hist_green else 'rgba(239, 83, 80, 0.5)'
                 })
@@ -156,14 +159,12 @@ class TradingViewFormatter:
 
 
 def get_formatted_stock_data(ticker: str):
-    # Ajan 1: Veriyi çek
     fetcher = StockDataFetcher(ticker)
     raw_data = fetcher.fetch_data()
-    
+
     if not raw_data:
         return None
-        
-    # Ajan 2: Veriyi formatla
+
     return TradingViewFormatter.format_data(raw_data)
 
 
@@ -172,40 +173,69 @@ class NewsAgent:
     def __init__(self, ticker: str):
         self.ticker = ticker
 
-    def fetch_news(self):
+    def fetch_news(self) -> str:
         try:
-            # .IS uzantısını temizle
             search_query = self.ticker.replace(".IS", "")
             url = f"https://news.google.com/rss/search?q={search_query}+hisse+ekonomi&hl=tr&gl=TR&ceid=TR:tr"
-            
+
             feed = feedparser.parse(url)
-            
+
             if not feed.entries:
                 return "Haber bulunamadı"
-                
+
             news_items = []
-            for entry in feed.entries[:5]: # En güncel 5 haber
+            for entry in feed.entries[:5]:
                 news_items.append(entry.title)
-                
+
             return ". ".join(news_items)
-            
+
         except Exception as e:
             print(f"Haber çekme hatası: {e}")
             return "Haber bulunamadı"
 
+    def _analyze_sentiment(self, news_text: str) -> dict:
+        if news_text == "Haber bulunamadı":
+            return {"score": 50, "label": "Nötr"}
+
+        prompt = (
+            "Aşağıdaki haber başlıklarının borsa açısından duygu durumunu analiz et. "
+            "SADECE şu JSON formatında yanıt ver, başka hiçbir şey yazma:\n"
+            "{\"score\": <0-100 arası tam sayı>, \"label\": \"<Pozitif|Negatif|Nötr>\"}\n\n"
+            f"Haberler: {news_text[:600]}"
+        )
+        try:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key or api_key == "senin_api_anahtarin_buraya":
+                return {"score": 50, "label": "Nötr"}
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            response = model.generate_content(prompt)
+            text = response.text.strip().replace("```json", "").replace("```", "").strip()
+            return json.loads(text)
+        except Exception:
+            return {"score": 50, "label": "Nötr"}
+
+    def fetch_news_with_sentiment(self) -> dict:
+        news_text = self.fetch_news()
+        sentiment = self._analyze_sentiment(news_text)
+        return {"news_text": news_text, "sentiment": sentiment}
+
 
 class AIAgent:
     """Ajan 4: AI Analisti"""
-    def __init__(self, ticker: str):
+    def __init__(self, ticker: str, persona: str = "short_term"):
         self.ticker = ticker
+        self.persona = persona
 
-    def generate_summary(self, news_text: str, technical_data=None):
+    def _build_prompt(self, news_text: str, technical_data=None) -> str:
+        persona_desc = PERSONA_PROMPTS.get(self.persona, PERSONA_PROMPTS["short_term"])
+
         if not news_text or news_text == "Haber bulunamadı":
             news_section = "Bu hisse senedi için güncel bir haber bulunamadı."
         else:
             news_section = f"Haberler: {news_text}"
 
         prompt = (
+            f"[YATIRIMCI PERSONASı: {persona_desc}]\n\n"
             f"Sen kıdemli bir borsa analisti ve aynı zamanda usta bir jeopolitik/makroekonomi uzmanısın. Haberlerde savaş, siyasi kriz veya faiz kararı varsa bunların sektörel etkilerini mutlaka analiz et. Sana verilen {self.ticker} hissesine ait teknik (RSI, SMA, Fiyat vb.) ve temel (Haberler, Rasyolar) verileri kullanarak KESİNLİKLE aşağıdaki Markdown formatına uyarak bir analiz yaz. Uzun paragraflardan kaçın, her şeyi kısa, net ve maddeler halinde yaz:\n\n"
             f"### 🎯 Genel Özet\n"
             f"[Buraya 1-2 cümlelik durum özeti yaz]\n\n"
@@ -217,21 +247,20 @@ class AIAgent:
             f"* **Momentum (RSI):** [RSI değerini yorumla]\n"
             f"* **Bantlar:** [Bollinger durumunu yorumla]\n\n"
         )
-        
+
         if technical_data:
             rsi = technical_data.get('rsi14', 50)
             sma50 = technical_data.get('sma50', 1)
             close = technical_data.get('close', 1)
             bb_up = technical_data.get('bb_up', 1)
             bb_low = technical_data.get('bb_low', 1)
-            
-            # Yeni eklenen veriler
+
             macd_line = technical_data.get('macd_line', 0.0)
             macd_signal = technical_data.get('macd_signal', 0.0)
             macd_hist = technical_data.get('macd_hist', 0.0)
             volume_current = technical_data.get('volume', 0.0)
             volume_avg_20 = technical_data.get('volume_sma_20', 0.0)
-            
+
             sma_status = "altında" if close < sma50 else "üstünde"
             bb_dist = round(((bb_up - close) / close) * 100, 2) if bb_up and close else 0
 
@@ -255,18 +284,24 @@ class AIAgent:
             )
 
         prompt += f"--- HABERLER ---\n{news_section}"
+        return prompt
 
+    def generate_summary_stream(self, news_text: str, technical_data=None):
+        prompt = self._build_prompt(news_text, technical_data)
         try:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key or api_key == "senin_api_anahtarin_buraya":
-                return "Mock AI Özeti: Haberler genel olarak olumlu bir tablo çiziyor. Şirketin yeni dönem bilançosu yatırımcıları tatmin edebilecek düzeyde. Kısa vadede yükseliş trendinin devam etmesi beklenebilir."
-                
+                yield "Mock AI Özeti: Haberler genel olarak olumlu bir tablo çiziyor. Şirketin yeni dönem bilançosu yatırımcıları tatmin edebilecek düzeyde. Kısa vadede yükseliş trendinin devam etmesi beklenebilir."
+                return
+
             model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(prompt)
-            return response.text.replace('\n', ' ').strip()
+            response = model.generate_content(prompt, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
         except Exception as e:
             print(f"AI özet hatası: {e}")
-            return "Mock AI Özeti (API Hatası): Küresel piyasalardaki dalgalanmalar hisseyi etkilemiş görünüyor. Yatırımcıların destek seviyelerini yakından takip etmesi önerilir."
+            yield "Mock AI Özeti (API Hatası): Küresel piyasalardaki dalgalanmalar hisseyi etkilemiş görünüyor. Yatırımcıların destek seviyelerini yakından takip etmesi önerilir."
 
 
 class FundamentalAgent:
@@ -281,7 +316,7 @@ class FundamentalAgent:
             stock = yf.Ticker(self.ticker)
             info = stock.info
             fast = stock.fast_info
-            
+
             def get_val(key, fast_key=None):
                 val = info.get(key)
                 if (val is None or val == "N/A") and fast_key:
@@ -305,6 +340,7 @@ class FundamentalAgent:
         except Exception as e:
             return {"trailingPE": "N/A", "priceToBook": "N/A", "marketCap": "N/A", "dividendYield": "N/A", "fiftyTwoWeekHigh": "N/A", "fiftyTwoWeekLow": "N/A"}
 
+
 class SimulationAgent:
     """Ajan 6: Portföy Simülasyon Uzmanı"""
     def __init__(self, ticker: str):
@@ -318,13 +354,11 @@ class SimulationAgent:
             if not raw_data:
                 return {"error": "Simülasyon için yeterli veri bulunamadı."}
 
-            # Verileri tarihe göre sırala (eskiden yeniye)
             raw_data.sort(key=lambda x: x['date'])
 
-            # Her ayın ilk işlem gününü bul
             monthly_first_days = {}
             for item in raw_data:
-                month_key = item['date'][:7] # YYYY-MM
+                month_key = item['date'][:7]
                 if month_key not in monthly_first_days:
                     monthly_first_days[month_key] = item
 
@@ -340,7 +374,6 @@ class SimulationAgent:
             total_invested = 0.0
             total_shares = 0.0
 
-            # Her ay yatırım yap
             for month in target_months:
                 day_data = monthly_first_days[month]
                 price = day_data['close']
@@ -348,11 +381,9 @@ class SimulationAgent:
                 total_invested += monthly_investment_amount
                 total_shares += shares_bought
 
-            # Güncel değeri hesapla (Son kapanış fiyatı üzerinden)
             last_price = raw_data[-1]['close']
             current_value = total_shares * last_price
-            
-            # Kar/Zarar Yüzdesi
+
             profit_loss_pct = ((current_value - total_invested) / total_invested) * 100 if total_invested > 0 else 0
 
             return {
